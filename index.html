@@ -10,9 +10,8 @@
     <meta name="apple-mobile-web-app-title" content="UK Trip">
     <meta name="theme-color" content="#f8fafc">
     
-    <!-- Icons (Modern British Flag Motif) -->
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f172a'/%3E%3Cpath d='M0 45h100v10H0z' fill='%231e293b'/%3E%3Cpath d='M45 0h10v100H45z' fill='%231e293b'/%3E%3Cpath d='M50 25 L50 75 M25 50 L75 50' stroke='%233b82f6' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%233b82f6'/%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230f172a'/%3E%3Cpath d='M0 45h100v10H0z' fill='%231e293b'/%3E%3Cpath d='M45 0h10v100H45z' fill='%231e293b'/%3E%3Cpath d='M50 25 L50 75 M25 50 L75 50' stroke='%233b82f6' stroke-width='8' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='12' fill='%233b82f6'/%3E%3C/svg%3E">
 
     <title>Honeymoon Wishlist</title>
     
@@ -99,7 +98,7 @@
             </button>
         </header>
 
-        <!-- Compact Form -->
+        <!-- Main Form -->
         <div id="add-form" class="hidden mb-6 bg-white p-5 rounded-[1.5rem] shadow-xl border border-slate-100">
             <div class="space-y-3">
                 <div class="grid grid-cols-1 gap-2">
@@ -147,7 +146,7 @@
         <div id="items-list" class="space-y-3"></div>
     </div>
 
-    <!-- BOTTOM PROGRESS BAR -->
+    <!-- Bottom Dashboard -->
     <div class="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem + var(--sab))] pointer-events-none z-[80]">
         <div class="max-w-md mx-auto bg-white/70 backdrop-blur-xl rounded-2xl p-3 px-5 shadow-xl flex items-center justify-between pointer-events-auto border border-white/40">
             <div class="flex items-center gap-4">
@@ -166,7 +165,7 @@
         </div>
     </div>
 
-    <!-- EDIT MODAL -->
+    <!-- Edit Main Item Modal -->
     <div id="edit-modal" class="modal-base" onclick="closeEditModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6"></div>
@@ -201,12 +200,45 @@
         </div>
     </div>
 
+    <!-- Edit Shop Modal -->
+    <div id="shop-edit-modal" class="modal-base" onclick="closeShopEditModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="w-12 h-1 bg-slate-100 rounded-full mx-auto mb-6"></div>
+            <h3 class="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+                <i data-lucide="store" class="w-5 h-5 text-purple-500"></i>お店情報の編集
+            </h3>
+            <div class="space-y-4 mb-8">
+                <input type="text" id="modal-shop-name" placeholder="店名" class="w-full px-4 py-4 bg-slate-50 rounded-xl border border-slate-100 font-bold outline-none">
+                <input type="text" id="modal-shop-url" placeholder="Google Maps URL" class="w-full px-4 py-4 bg-slate-50 rounded-xl border border-slate-100 text-sm outline-none">
+                
+                <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="modal-shop-starred" class="hidden peer">
+                        <div class="w-10 h-10 rounded-xl border-2 flex items-center justify-center peer-checked:bg-yellow-400 peer-checked:border-yellow-400 text-slate-200 peer-checked:text-white transition-all">
+                            <i data-lucide="crown" class="w-5 h-5 fill-current"></i>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-400 peer-checked:text-yellow-500 uppercase">Priority</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="modal-shop-reserved" class="hidden peer">
+                        <div class="w-10 h-10 rounded-xl border-2 flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 text-slate-200 peer-checked:text-white transition-all">
+                            <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-400 peer-checked:text-blue-500 uppercase">Reserved</span>
+                    </label>
+                </div>
+            </div>
+            <button onclick="saveShopEdit()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest active:scale-95">ショップ情報を更新</button>
+        </div>
+    </div>
+
     <script>
-        let items = JSON.parse(localStorage.getItem('uk_wishlist_v3')) || [];
+        let items = JSON.parse(localStorage.getItem('uk_wishlist_v4')) || [];
         let activeTab = 'all';
         let selectedCategory = 'food';
         let expandedId = null;
         let editingItemId = null;
+        let editingShopInfo = null; // { itemId, shopIndex }
 
         const categories = [
             { id: 'food', label: 'グルメ', icon: 'utensils', color: 'text-orange-500', bg: 'bg-orange-50', activeBg: 'bg-orange-500' },
@@ -348,28 +380,49 @@
                     ${item.category === 'food' ? `
                     <div class="expandable-content ${isExpanded ? 'expanded' : ''} bg-slate-50/50">
                         <div class="px-3 pb-3 pt-1 space-y-2">
-                            <div class="flex flex-col gap-1.5">
-                                <input id="shop-name-${item.id}" type="text" placeholder="お店の名前" class="text-[10px] px-3 py-2 bg-white rounded-lg border border-slate-100 outline-none" onclick="event.stopPropagation()">
-                                <div class="flex gap-1.5">
-                                    <input id="shop-url-${item.id}" type="text" placeholder="Google Map URL (任意)" class="flex-1 text-[10px] px-3 py-2 bg-white rounded-lg border border-slate-100 outline-none" onclick="event.stopPropagation()">
-                                    <button onclick="event.stopPropagation(); addShop(${item.id})" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase shrink-0">追加</button>
+                            <!-- Shop Add Form -->
+                            <div class="flex flex-col gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm" onclick="event.stopPropagation()">
+                                <input id="shop-name-${item.id}" type="text" placeholder="お店の名前" class="text-[10px] px-3 py-2 bg-slate-50 rounded-lg outline-none">
+                                <div class="flex items-center gap-2">
+                                    <input id="shop-url-${item.id}" type="text" placeholder="Map URL (任意)" class="flex-1 text-[10px] px-3 py-2 bg-slate-50 rounded-lg outline-none">
+                                    <div class="flex gap-1 shrink-0">
+                                        <label class="cursor-pointer">
+                                            <input type="checkbox" id="shop-star-${item.id}" class="hidden peer">
+                                            <div class="w-7 h-7 rounded-lg border flex items-center justify-center peer-checked:bg-yellow-400 peer-checked:border-yellow-400 text-slate-200 peer-checked:text-white transition-colors"><i data-lucide="crown" class="w-3.5 h-3.5"></i></div>
+                                        </label>
+                                        <label class="cursor-pointer">
+                                            <input type="checkbox" id="shop-res-${item.id}" class="hidden peer">
+                                            <div class="w-7 h-7 rounded-lg border flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 text-slate-200 peer-checked:text-white transition-colors"><i data-lucide="calendar-check" class="w-3.5 h-3.5"></i></div>
+                                        </label>
+                                    </div>
+                                    <button onclick="addShop(${item.id})" class="bg-slate-800 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase active:scale-95">追加</button>
                                 </div>
                             </div>
+
                             <div class="space-y-1">
                                 ${(item.shops || []).map((shop, idx) => `
-                                    <div class="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100">
+                                    <div class="flex items-center justify-between bg-white px-3 py-2.5 rounded-lg border border-slate-100 shadow-sm">
                                         <div class="flex items-center gap-2 flex-1 min-w-0" onclick="event.stopPropagation(); toggleShopComplete(${item.id}, ${idx})">
-                                            <div class="w-4 h-4 rounded-full border flex items-center justify-center ${shop.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200 text-transparent'}">
-                                                <i data-lucide="check" class="w-2.5 h-2.5"></i>
+                                            <div class="w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${shop.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-200 text-transparent'}">
+                                                <i data-lucide="check" class="w-3 h-3"></i>
                                             </div>
-                                            <span class="text-[10px] font-bold text-slate-600 truncate ${shop.completed ? 'line-through text-slate-300' : ''}">${shop.name}</span>
+                                            <span class="text-[11px] font-bold text-slate-700 truncate ${shop.completed ? 'line-through text-slate-300' : ''}">${shop.name}</span>
                                         </div>
-                                        <div class="flex items-center gap-1 shrink-0">
-                                            <button onclick="event.stopPropagation(); openMap('${shop.url}', '${shop.name}', '${item.spot}')" class="p-2 text-blue-400 hover:bg-blue-50 rounded-lg">
+                                        <div class="flex items-center gap-0.5 shrink-0">
+                                            <button onclick="event.stopPropagation(); toggleShopStatus(${item.id}, ${idx}, 'isStarred')" class="p-1.5 ${shop.isStarred ? 'text-yellow-400' : 'text-slate-200'} hover:bg-slate-50 rounded-lg transition-colors">
+                                                <i data-lucide="crown" class="w-3.5 h-3.5 ${shop.isStarred ? 'fill-current' : ''}"></i>
+                                            </button>
+                                            <button onclick="event.stopPropagation(); toggleShopStatus(${item.id}, ${idx}, 'isReserved')" class="p-1.5 ${shop.isReserved ? 'text-blue-500' : 'text-slate-200'} hover:bg-slate-50 rounded-lg transition-colors">
+                                                <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="event.stopPropagation(); openMap('${shop.url}', '${shop.name}', '${item.spot}')" class="p-1.5 text-blue-400 hover:bg-blue-50 rounded-lg">
                                                 <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
                                             </button>
-                                            <button onclick="event.stopPropagation(); removeShop(${item.id}, ${idx})" class="p-2 text-slate-200 hover:text-rose-500 rounded-lg">
-                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            <button onclick="event.stopPropagation(); openShopEditModal(${item.id}, ${idx})" class="p-1.5 text-slate-200 hover:text-blue-500 rounded-lg">
+                                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="event.stopPropagation(); removeShop(${item.id}, ${idx})" class="p-1.5 text-slate-200 hover:text-rose-500 rounded-lg">
+                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -413,6 +466,9 @@
         function addShop(itemId) {
             const nameInput = document.getElementById(`shop-name-${itemId}`);
             const urlInput = document.getElementById(`shop-url-${itemId}`);
+            const starInput = document.getElementById(`shop-star-${itemId}`);
+            const resInput = document.getElementById(`shop-res-${itemId}`);
+
             if(!nameInput.value.trim()) return;
             
             items = items.map(i => i.id === itemId ? {
@@ -420,6 +476,8 @@
                 shops: [...(i.shops || []), {
                     name: nameInput.value, 
                     url: urlInput.value.trim(),
+                    isStarred: starInput.checked,
+                    isReserved: resInput.checked,
                     completed: false
                 }]
             } : i);
@@ -428,10 +486,24 @@
             renderItems();
             nameInput.value = '';
             urlInput.value = '';
+            starInput.checked = false;
+            resInput.checked = false;
+        }
+
+        function toggleShopStatus(itemId, idx, key) {
+            items = items.map(i => {
+                if(i.id === itemId) {
+                    const shops = [...i.shops];
+                    shops[idx][key] = !shops[idx][key];
+                    return {...i, shops};
+                }
+                return i;
+            });
+            save(); renderItems();
         }
 
         function openMap(url, name, spot) {
-            if (url && url.startsWith('http')) {
+            if (url && (url.startsWith('http') || url.startsWith('https'))) {
                 window.open(url, '_blank');
             } else {
                 const query = encodeURIComponent(`${name} ${spot}`);
@@ -452,21 +524,25 @@
         }
 
         function removeShop(itemId, idx) {
-            items = items.map(i => {
-                if(i.id === itemId) {
-                    const shops = [...i.shops];
-                    shops.splice(idx, 1);
-                    return {...i, shops};
-                }
-                return i;
-            });
-            save(); renderItems();
+            if(confirm('このお店を削除しますか？')) {
+                items = items.map(i => {
+                    if(i.id === itemId) {
+                        const shops = [...i.shops];
+                        shops.splice(idx, 1);
+                        return {...i, shops};
+                    }
+                    return i;
+                });
+                save(); renderItems();
+            }
         }
 
         function toggleComplete(id) {
             items = items.map(i => i.id === id ? {...i, completed: !i.completed} : i);
             save(); renderItems();
         }
+
+        // --- EDITING MODALS ---
 
         function openEditModal(id) {
             const item = items.find(i => i.id === id);
@@ -493,6 +569,46 @@
             save(); renderItems(); closeEditModal();
         }
 
+        function openShopEditModal(itemId, shopIdx) {
+            const item = items.find(i => i.id === itemId);
+            const shop = item.shops[shopIdx];
+            editingShopInfo = { itemId, shopIdx };
+            
+            document.getElementById('modal-shop-name').value = shop.name;
+            document.getElementById('modal-shop-url').value = shop.url || '';
+            document.getElementById('modal-shop-starred').checked = shop.isStarred || false;
+            document.getElementById('modal-shop-reserved').checked = shop.isReserved || false;
+            
+            document.getElementById('shop-edit-modal').classList.add('show');
+        }
+
+        function closeShopEditModal() { 
+            document.getElementById('shop-edit-modal').classList.remove('show'); 
+            editingShopInfo = null;
+        }
+
+        function saveShopEdit() {
+            if(!editingShopInfo) return;
+            const { itemId, shopIdx } = editingShopInfo;
+            
+            items = items.map(i => {
+                if(i.id === itemId) {
+                    const shops = [...i.shops];
+                    shops[shopIdx] = {
+                        ...shops[shopIdx],
+                        name: document.getElementById('modal-shop-name').value,
+                        url: document.getElementById('modal-shop-url').value,
+                        isStarred: document.getElementById('modal-shop-starred').checked,
+                        isReserved: document.getElementById('modal-shop-reserved').checked
+                    };
+                    return { ...i, shops };
+                }
+                return i;
+            });
+            
+            save(); renderItems(); closeShopEditModal();
+        }
+
         function deleteItem(id) {
             if(confirm('この項目を削除しますか？')) {
                 items = items.filter(i => i.id !== id);
@@ -515,7 +631,7 @@
             document.getElementById('total-budget-display').innerText = '£' + budget.toLocaleString();
         }
 
-        function save() { localStorage.setItem('uk_wishlist_v3', JSON.stringify(items)); }
+        function save() { localStorage.setItem('uk_wishlist_v4', JSON.stringify(items)); }
 
         window.onload = init;
     </script>
