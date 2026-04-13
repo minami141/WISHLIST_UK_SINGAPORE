@@ -20,7 +20,6 @@
             overscroll-behavior-y: none;
         }
 
-        /* 横スクロールアニメーション */
         .scroll-text-container {
             overflow: hidden;
             white-space: nowrap;
@@ -32,10 +31,9 @@
             transition: transform 0.3s ease;
         }
 
-        /* 文字が長い場合のみアニメーションを適用するクラスをJSで制御 */
         .animate-scroll {
             animation: scroll-left 10s linear infinite;
-            padding-right: 50px; /* ループ時の隙間 */
+            padding-right: 50px;
         }
 
         @keyframes scroll-left {
@@ -102,12 +100,12 @@
                         </button>
                         <div id="category-options" class="hidden absolute top-full left-0 w-full mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 overflow-hidden"></div>
                     </div>
-                    <input type="text" id="new-name" placeholder="やりたいこと（例：フィッシュアンドチップス）" class="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-sm font-bold placeholder:text-slate-300">
+                    <input type="text" id="new-name" placeholder="やりたいこと（例：アフタヌーンティー）" class="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-sm font-bold placeholder:text-slate-300 outline-none">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="new-spot" placeholder="場所" class="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-medium">
-                    <input type="number" id="new-budget" placeholder="予算 (£)" class="w-full px-4 py-3 bg-blue-50/50 rounded-xl border border-blue-100 text-xs font-black text-blue-600">
+                    <input type="text" id="new-spot" placeholder="場所（例：London）" class="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-medium outline-none">
+                    <input type="number" id="new-budget" placeholder="予算 (£) 0=FREE" class="w-full px-4 py-3 bg-blue-50/50 rounded-xl border border-blue-100 text-xs font-black text-blue-600 outline-none">
                 </div>
 
                 <div class="flex items-center justify-between pt-2">
@@ -139,7 +137,7 @@
         <div id="items-list" class="space-y-3"></div>
     </div>
 
-    <!-- REFINED BOTTOM PROGRESS BAR -->
+    <!-- BOTTOM PROGRESS BAR -->
     <div class="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem + var(--sab))] pointer-events-none z-[80]">
         <div class="max-w-md mx-auto bg-white/70 backdrop-blur-xl rounded-2xl p-3 px-5 shadow-xl flex items-center justify-between pointer-events-auto border border-white/40">
             <div class="flex items-center gap-4">
@@ -171,6 +169,23 @@
                     <input type="text" id="modal-edit-spot" class="w-full px-4 py-4 bg-slate-50 rounded-xl border border-slate-100 font-bold outline-none">
                     <input type="number" id="modal-edit-budget" class="w-full px-4 py-4 bg-blue-50/50 rounded-xl border border-blue-100 font-black text-blue-600 outline-none">
                 </div>
+                
+                <div class="flex gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="modal-edit-starred" class="hidden peer">
+                        <div class="w-10 h-10 rounded-xl border-2 flex items-center justify-center peer-checked:bg-yellow-400 peer-checked:border-yellow-400 text-slate-200 peer-checked:text-white transition-all">
+                            <i data-lucide="crown" class="w-5 h-5 fill-current"></i>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-400 peer-checked:text-yellow-500 uppercase">Priority</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="modal-edit-reserved" class="hidden peer">
+                        <div class="w-10 h-10 rounded-xl border-2 flex items-center justify-center peer-checked:bg-blue-500 peer-checked:border-blue-500 text-slate-200 peer-checked:text-white transition-all">
+                            <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-400 peer-checked:text-blue-500 uppercase">Reserved</span>
+                    </label>
+                </div>
             </div>
             <button onclick="saveModalEdit()" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest active:scale-95">更新する</button>
         </div>
@@ -181,7 +196,7 @@
         let activeTab = 'all';
         let selectedCategory = 'food';
         let expandedId = null;
-        let editingItem = null;
+        let editingItemId = null;
 
         const categories = [
             { id: 'food', label: 'グルメ', icon: 'utensils', color: 'text-orange-500', bg: 'bg-orange-50', activeBg: 'bg-orange-500' },
@@ -273,6 +288,9 @@
             });
             save(); renderItems();
             nameInput.value = '';
+            document.getElementById('new-budget').value = '';
+            document.getElementById('new-is-starred').checked = false;
+            document.getElementById('new-is-reserved').checked = false;
             toggleForm();
         }
 
@@ -288,14 +306,14 @@
 
             container.innerHTML = filtered.map(item => {
                 const isExpanded = expandedId === item.id;
+                const isFree = item.budget === 0;
                 return `
                 <div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden card-accent-${item.category}">
                     <div class="p-3 flex items-center gap-3" onclick="toggleExpand(${item.id})">
-                        <button onclick="event.stopPropagation(); toggleComplete(${item.id})" class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${item.completed ? 'bg-emerald-500 text-white' : 'bg-slate-50 border border-slate-200 text-transparent'}">
+                        <button onclick="event.stopPropagation(); toggleComplete(${item.id})" class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${item.completed ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-50 border border-slate-200 text-transparent'}">
                             <i data-lucide="check" class="w-4 h-4"></i>
                         </button>
                         
-                        <!-- テキストエリア：長い場合にスクロール -->
                         <div class="flex-1 min-w-0 scroll-text-container">
                             <div id="text-${item.id}" class="scroll-text flex items-center gap-1.5 font-bold text-slate-800 text-sm ${item.completed ? 'line-through text-slate-300' : ''}">
                                 ${item.name}
@@ -304,7 +322,10 @@
                             </div>
                             <div class="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase">
                                 <span>${item.spot}</span>
-                                <span class="text-blue-500 italic">£${item.budget.toLocaleString()}</span>
+                                ${isFree 
+                                    ? '<span class="flex items-center gap-0.5 text-emerald-500"><i data-lucide="sparkles" class="w-2 h-2"></i>FREE</span>' 
+                                    : `<span class="text-blue-500 italic">£${item.budget.toLocaleString()}</span>`
+                                }
                             </div>
                         </div>
 
@@ -317,9 +338,12 @@
                     ${item.category === 'food' ? `
                     <div class="expandable-content ${isExpanded ? 'expanded' : ''} bg-slate-50/50">
                         <div class="px-3 pb-3 pt-1 space-y-2">
-                            <div class="flex gap-1.5">
-                                <input id="shop-input-${item.id}" type="text" placeholder="お店の名前を追加..." class="flex-1 text-[10px] px-3 py-2 bg-white rounded-lg border border-slate-100 outline-none" onclick="event.stopPropagation()">
-                                <button onclick="event.stopPropagation(); addShop(${item.id})" class="bg-slate-800 text-white px-3 py-2 rounded-lg text-[9px] font-black uppercase">ADD</button>
+                            <div class="flex flex-col gap-1.5">
+                                <input id="shop-name-${item.id}" type="text" placeholder="お店の名前" class="text-[10px] px-3 py-2 bg-white rounded-lg border border-slate-100 outline-none" onclick="event.stopPropagation()">
+                                <div class="flex gap-1.5">
+                                    <input id="shop-url-${item.id}" type="text" placeholder="Google Map URL (任意)" class="flex-1 text-[10px] px-3 py-2 bg-white rounded-lg border border-slate-100 outline-none" onclick="event.stopPropagation()">
+                                    <button onclick="event.stopPropagation(); addShop(${item.id})" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase shrink-0">追加</button>
+                                </div>
                             </div>
                             <div class="space-y-1">
                                 ${(item.shops || []).map((shop, idx) => `
@@ -330,30 +354,33 @@
                                             </div>
                                             <span class="text-[10px] font-bold text-slate-600 truncate ${shop.completed ? 'line-through text-slate-300' : ''}">${shop.name}</span>
                                         </div>
-                                        <button onclick="event.stopPropagation(); removeShop(${item.id}, ${idx})" class="p-1 text-slate-200 hover:text-rose-500"><i data-lucide="x" class="w-3 h-3"></i></button>
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <button onclick="event.stopPropagation(); openMap('${shop.url}', '${shop.name}', '${item.spot}')" class="p-2 text-blue-400 hover:bg-blue-50 rounded-lg">
+                                                <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                            <button onclick="event.stopPropagation(); removeShop(${item.id}, ${idx})" class="p-2 text-slate-200 hover:text-rose-500 rounded-lg">
+                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
                         </div>
                     </div>` : ''}
                 </div>
-            `; }).join('');
+                `; }).join('');
             
             lucide.createIcons();
             updateProgress();
             checkTextOverflow();
         }
 
-        // テキストがはみ出しているかチェックしてアニメーション適用
         function checkTextOverflow() {
             items.forEach(item => {
                 const el = document.getElementById(`text-${item.id}`);
                 if (!el) return;
                 const container = el.parentElement;
-                
-                // コンテナより中身の方が大きい場合
                 if (el.scrollWidth > container.clientWidth) {
-                    // 内容を複製してループさせる（マーキー効果）
                     if (!el.dataset.duplicated) {
                         el.innerHTML += ` <span class="mx-4 opacity-0">|</span> ` + el.innerHTML;
                         el.dataset.duplicated = "true";
@@ -374,10 +401,32 @@
         }
 
         function addShop(itemId) {
-            const input = document.getElementById(`shop-input-${itemId}`);
-            if(!input.value.trim()) return;
-            items = items.map(i => i.id === itemId ? {...i, shops: [...(i.shops || []), {name: input.value, completed: false}]} : i);
-            save(); renderItems();
+            const nameInput = document.getElementById(`shop-name-${itemId}`);
+            const urlInput = document.getElementById(`shop-url-${itemId}`);
+            if(!nameInput.value.trim()) return;
+            
+            items = items.map(i => i.id === itemId ? {
+                ...i, 
+                shops: [...(i.shops || []), {
+                    name: nameInput.value, 
+                    url: urlInput.value.trim(),
+                    completed: false
+                }]
+            } : i);
+            
+            save(); 
+            renderItems();
+            nameInput.value = '';
+            urlInput.value = '';
+        }
+
+        function openMap(url, name, spot) {
+            if (url && url.startsWith('http')) {
+                window.open(url, '_blank');
+            } else {
+                const query = encodeURIComponent(`${name} ${spot}`);
+                window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+            }
         }
 
         function toggleShopComplete(itemId, idx) {
@@ -410,17 +459,27 @@
         }
 
         function openEditModal(id) {
-            editingItem = items.find(i => i.id === id);
-            document.getElementById('modal-edit-name').value = editingItem.name;
-            document.getElementById('modal-edit-spot').value = editingItem.spot;
-            document.getElementById('modal-edit-budget').value = editingItem.budget;
+            const item = items.find(i => i.id === id);
+            editingItemId = id;
+            document.getElementById('modal-edit-name').value = item.name;
+            document.getElementById('modal-edit-spot').value = item.spot;
+            document.getElementById('modal-edit-budget').value = item.budget;
+            document.getElementById('modal-edit-starred').checked = item.isStarred || false;
+            document.getElementById('modal-edit-reserved').checked = item.isReserved || false;
             document.getElementById('edit-modal').classList.add('show');
         }
 
         function closeEditModal() { document.getElementById('edit-modal').classList.remove('show'); }
 
         function saveModalEdit() {
-            items = items.map(i => i.id === editingItem.id ? {...i, name: document.getElementById('modal-edit-name').value, spot: document.getElementById('modal-edit-spot').value, budget: parseInt(document.getElementById('modal-edit-budget').value) || 0} : i);
+            items = items.map(i => i.id === editingItemId ? {
+                ...i, 
+                name: document.getElementById('modal-edit-name').value, 
+                spot: document.getElementById('modal-edit-spot').value, 
+                budget: parseInt(document.getElementById('modal-edit-budget').value) || 0,
+                isStarred: document.getElementById('modal-edit-starred').checked,
+                isReserved: document.getElementById('modal-edit-reserved').checked
+            } : i);
             save(); renderItems(); closeEditModal();
         }
 
